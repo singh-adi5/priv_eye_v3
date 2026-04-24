@@ -36,3 +36,6 @@ logs/
 
 # Node (dashboard deps if any)
 node_modules/
+
+# ML artifacts
+*_meta.json

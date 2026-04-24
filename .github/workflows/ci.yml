@@ -83,8 +83,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install pip-audit
+      - name: Install pip-audit + pip-tools
+        run: pip install pip-audit pip-tools
       - name: Audit API deps
-        run: pip-audit --requirement api/pyproject.toml --fix --dry-run
+        run: |
+          cd api
+          pip install -e ".[dev,insights]" --quiet
+          pip-audit --skip-editable
       - name: Audit agent deps
-        run: pip-audit --requirement agent/pyproject.toml --fix --dry-run
+        run: |
+          cd agent
+          pip install -e ".[dev]" --quiet
+          pip-audit --skip-editable

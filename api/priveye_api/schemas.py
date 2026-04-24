@@ -144,7 +144,7 @@ class ScanRead(BaseModel):
     host_id: str
     risk: RiskLevel
     score: int
-    probabilities: dict
+    probabilities: dict[str, float]
     reasons: list[str]
     model_version: str
     created_at: datetime

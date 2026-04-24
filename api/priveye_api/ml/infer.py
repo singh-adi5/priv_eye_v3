@@ -33,6 +33,9 @@ class ModelNotLoadedError(RuntimeError):
     pass
 
 
+ModelNotLoaded = ModelNotLoadedError  # backward-compat alias
+
+
 class ModelIntegrityError(RuntimeError):
     """Raised when MODEL_SHA256 is configured but doesn't match the file on disk."""
 

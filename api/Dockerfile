@@ -2,11 +2,12 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install deps first so layer is cached across code changes
+# Copy source first — non-editable install requires package source to be present.
+# Editable install (-e) before COPY causes the Docker build to fail.
 COPY pyproject.toml ./
-RUN pip install --no-cache-dir -e ".[insights]"
-
 COPY priveye_api/ ./priveye_api/
+
+RUN pip install --no-cache-dir ".[insights]"
 
 EXPOSE 8000
 

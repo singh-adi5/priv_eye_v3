@@ -22,7 +22,7 @@ from . import __version__
 from .core.config import get_settings
 from .core.db import init_db
 from .core.security import configure_app_security
-from .ml.infer import ModelIntegrityError, ModelNotLoaded, load_model
+from .ml.infer import ModelIntegrityError, ModelNotLoadedError, load_model
 from .routers import auth, health, hosts, insights, scans
 
 _log = logging.getLogger("priveye")
@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
 
     try:
         load_model()
-    except (ModelNotLoaded, ModelIntegrityError) as e:
+    except (ModelNotLoadedError, ModelIntegrityError) as e:
         if settings.environment == "production":
             raise
         _log.warning("Model not available: %s — API will return 503 on /scans", e)

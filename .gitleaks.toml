@@ -1,10 +1,14 @@
 title = "Priv-Eye gitleaks config"
 
 [allowlist]
-description = "Allowlist for known test/CI values"
+description = "Allowlist for known non-secret values committed intentionally"
+
 regexes = [
-  # CI test JWT secret — not a real secret
   "ci-test-secret-not-real-at-least-32-chars",
-  # Training-only placeholder
   "training-only-not-for-production-use-padding-x",
+  "replace_with_openssl_rand_64",
+]
+
+paths = [
+  ".env.example",
 ]

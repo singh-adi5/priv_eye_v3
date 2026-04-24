@@ -81,9 +81,7 @@ def scan(
     payload = result.to_payload()
 
     if result.degraded_probes:
-        console.print(
-            f"[yellow]Some probes were degraded:[/] {', '.join(result.degraded_probes)}"
-        )
+        console.print(f"[yellow]Some probes were degraded:[/] {', '.join(result.degraded_probes)}")
 
     if dry_run:
         console.print(Panel("Dry run — payload below, not uploaded.", border_style="cyan"))

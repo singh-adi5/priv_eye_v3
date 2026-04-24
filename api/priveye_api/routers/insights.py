@@ -111,7 +111,7 @@ async def generate_insight(
 
     # Lazy-import so the package is optional (see pyproject `[insights]` extra).
     try:
-        from google import genai  # type: ignore[import-not-found]
+        from google import genai
     except ImportError as e:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE, "Insights backend not installed"

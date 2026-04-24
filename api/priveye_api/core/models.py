@@ -73,14 +73,14 @@ class Scan(Base, IDMixin, TimestampMixin):
 
     # The raw (validated) feature vector used at inference time. JSON for flexibility;
     # values are bounded by Pydantic upstream so no unbounded-size risk.
-    telemetry: Mapped[dict] = mapped_column(JSON, nullable=False)
+    telemetry: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
 
     # Output of the RF
     risk: Mapped[RiskLevel] = mapped_column(Enum(RiskLevel, native_enum=False), nullable=False)
     score: Mapped[int] = mapped_column(Integer, nullable=False)  # 0..100
-    probabilities: Mapped[dict] = mapped_column(JSON, nullable=False)  # {LOW, MEDIUM, HIGH}
-    feature_importances: Mapped[dict] = mapped_column(JSON, nullable=False)
-    reasons: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    probabilities: Mapped[dict[str, float]] = mapped_column(JSON, nullable=False)  # {LOW, MEDIUM, HIGH}
+    feature_importances: Mapped[dict[str, float]] = mapped_column(JSON, nullable=False)
+    reasons: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
 
     model_version: Mapped[str] = mapped_column(String(64), nullable=False)
 
@@ -106,7 +106,7 @@ class AuditLog(Base, IDMixin, TimestampMixin):
     event_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     outcome: Mapped[str] = mapped_column(String(16), nullable=False)  # success | failure
     # Redacted payload (no passwords, no tokens, no HMAC keys) — see core/audit.py
-    details: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    details: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
 
 
 class RefreshToken(Base, TimestampMixin):

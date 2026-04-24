@@ -21,7 +21,7 @@ import os
 import platform
 import shutil
 import subprocess  # noqa: S404 — subprocess is the whole point; we use it safely
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -177,7 +177,7 @@ def collect(timeout_per_probe: float = 20.0) -> ReconResult:
     suid_binaries: list[str] = []
     sudo_output = ""
     with ThreadPoolExecutor(max_workers=2) as pool:
-        futures = {
+        futures: dict[Future[tuple[list[str] | str, bool]], str] = {
             pool.submit(probe_suid, timeout_per_probe): "suid",
             pool.submit(probe_sudo, min(timeout_per_probe, 10.0)): "sudo",
         }

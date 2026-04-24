@@ -9,7 +9,7 @@ Control refs:
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -60,7 +60,7 @@ class Settings(BaseSettings):
 
     @field_validator("cors_origins")
     @classmethod
-    def _no_wildcard_in_prod(cls, v: str, info) -> str:  # type: ignore[no-untyped-def]
+    def _no_wildcard_in_prod(cls, v: str, info: Any) -> str:
         env = info.data.get("environment")
         if env == "production" and "*" in v:
             raise ValueError("CORS wildcard not allowed in production (ASVS V13.2.1)")

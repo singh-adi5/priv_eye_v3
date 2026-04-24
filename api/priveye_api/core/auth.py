@@ -87,7 +87,7 @@ def create_access_token(user: User) -> str:
     )
 
 
-def decode_access_token(token: str) -> dict:
+def decode_access_token(token: str) -> dict[str, Any]:
     """Raises jwt.PyJWTError on failure. Caller should catch and return 401."""
     return jwt.decode(
         token,
@@ -120,7 +120,7 @@ async def get_current_user(
     return user
 
 
-def require_role(*allowed: UserRole):
+def require_role(*allowed: UserRole) -> Any:
     """Factory: use as a dependency. Enforces role at endpoint level (ASVS V4.2)."""
 
     async def dep(user: Annotated[User, Depends(get_current_user)]) -> User:

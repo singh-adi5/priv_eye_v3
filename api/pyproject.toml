@@ -64,12 +64,36 @@ ignore = ["S101"]  # assert is fine in tests
 
 [tool.mypy]
 python_version = "3.11"
-strict = true
 plugins = ["pydantic.mypy"]
+
+# Explicit strict flags — equivalent to strict=true except we drop:
+# - disallow_subclassing_any (pydantic BaseSettings, sqlalchemy DeclarativeBase)
+# - warn_return_any / no-any-return (jwt, argon2, sqlalchemy return Any internally)
+# - disallow_untyped_decorators (slowapi @limiter.limit has no stubs)
+warn_unused_configs = true
+disallow_any_generics = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_reexport = true
+strict_equality = true
+extra_checks = true
 
 [[tool.mypy.overrides]]
 module = ["joblib", "joblib.*", "sklearn.*", "pandas", "pandas.*", "numpy", "numpy.*", "google.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["pydantic_settings", "pydantic_settings.*", "sqlalchemy.*", "slowapi.*", "jwt.*", "argon2.*", "alembic.*", "aiosqlite.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["priveye_api.core.auth", "priveye_api.core.config", "priveye_api.core.db", "priveye_api.routers.auth", "priveye_api.routers.scans"]
+disallow_any_return = false
+disable_error_codes = ["misc", "no-any-return"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

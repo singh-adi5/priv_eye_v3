@@ -12,7 +12,7 @@ Control refs:
 import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -66,7 +66,7 @@ async def register(
     request: Request,
     body: RegisterRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> dict:
+) -> dict[str, Any]:
     audit = AuditLogger(db)
 
     existing = await get_user_by_email(db, body.email.lower())

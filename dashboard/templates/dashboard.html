@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Priv-Eye Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
+</head>
+<body>
+
+<!-- ── Top nav ─────────────────────────────────────────────────────────── -->
+<nav class="topnav">
+  <div class="nav-brand">
+    <span class="brand-icon">◈</span>
+    <span class="brand-name">PRIV-EYE</span>
+    <span class="nav-version">v3</span>
+  </div>
+  <div class="nav-right">
+    {% if health.model_version is defined %}
+    <span class="nav-badge">model {{ health.model_version }}</span>
+    {% endif %}
+    <form method="POST" action="/logout" style="margin:0">
+      <button class="btn btn-ghost btn-sm" type="submit">Sign out</button>
+    </form>
+  </div>
+</nav>
+
+<!-- ── Main ────────────────────────────────────────────────────────────── -->
+<main class="main-grid">
+
+  <!-- ─ Fleet summary row ──────────────────────────────────────────────── -->
+  <section class="bento-row">
+    {% set high_count = scans | selectattr('risk', 'equalto', 'HIGH') | list | length %}
+    {% set med_count  = scans | selectattr('risk', 'equalto', 'MEDIUM') | list | length %}
+    {% set low_count  = scans | selectattr('risk', 'equalto', 'LOW')  | list | length %}
+    {% set total      = scans | length %}
+
+    <div class="bento bento-stat bento-danger">
+      <div class="stat-value">{{ high_count }}</div>
+      <div class="stat-label">HIGH risk scans</div>
+    </div>
+    <div class="bento bento-stat bento-warn">
+      <div class="stat-value">{{ med_count }}</div>
+      <div class="stat-label">MEDIUM risk scans</div>
+    </div>
+    <div class="bento bento-stat bento-ok">
+      <div class="stat-value">{{ low_count }}</div>
+      <div class="stat-label">LOW risk scans</div>
+    </div>
+    <div class="bento bento-stat bento-neutral">
+      <div class="stat-value">{{ hosts | length }}</div>
+      <div class="stat-label">Registered hosts</div>
+    </div>
+  </section>
+
+  <!-- ─ Host registration + scan table ───────────────────────────────── -->
+  <div class="two-col">
+
+    <!-- left: add host -->
+    <section class="bento bento-panel" id="add-host-panel">
+      <h2 class="panel-title">Register host</h2>
+      <p class="panel-sub">
+        A host token is issued once. Store it on the target — it authorises the agent to upload scans.
+      </p>
+      <form id="add-host-form" class="stack-form">
+        <label class="form-label">Hostname
+          <input class="form-input" type="text" id="new-hostname" name="hostname"
+                 placeholder="prod-db-01" pattern="[a-zA-Z0-9][a-zA-Z0-9\-\.]{0,251}" required>
+        </label>
+        <label class="form-label">Environment
+          <input class="form-input" type="text" id="new-env" name="environment"
+                 placeholder="prod" value="default">
+        </label>
+        <button class="btn btn-primary" type="submit" id="add-host-btn">Add host</button>
+      </form>
+      <div id="host-result" class="host-result-area" style="display:none"></div>
+
+      {% if hosts %}
+      <h3 class="subsection-title">Your hosts</h3>
+      <ul class="host-list">
+        {% for h in hosts %}
+        <li class="host-item" data-host-id="{{ h.id }}">
+          <span class="host-name">{{ h.hostname }}</span>
+          <span class="host-env env-tag">{{ h.environment }}</span>
+          <span class="host-status {{ 'status-active' if h.is_active else 'status-inactive' }}">
+            {{ 'active' if h.is_active else 'inactive' }}
+          </span>
+          <button class="btn btn-ghost btn-xs filter-btn" data-host="{{ h.id }}">filter scans</button>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="empty-state">No hosts yet — register one above, then run <code>priveye-agent scan</code>.</p>
+      {% endif %}
+    </section>
+
+    <!-- right: scan history -->
+    <section class="bento bento-panel" id="scan-panel">
+      <div class="panel-header">
+        <h2 class="panel-title">Scan history</h2>
+        <button class="btn btn-ghost btn-xs" id="clear-filter-btn" style="display:none">clear filter ✕</button>
+      </div>
+      {% if scans %}
+      <div class="scan-table-wrap">
+        <table class="scan-table">
+          <thead>
+            <tr>
+              <th>Host</th>
+              <th>Risk</th>
+              <th>Score</th>
+              <th>Model ver</th>
+              <th>Time</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="scan-tbody">
+            {% for s in scans %}
+            <tr class="scan-row" data-host="{{ s.host_id }}" data-scan-id="{{ s.id }}">
+              <td class="scan-host">{{ s.host_id[:8] }}…</td>
+              <td><span class="risk-badge risk-{{ s.risk | lower }}">{{ s.risk }}</span></td>
+              <td class="scan-score">{{ s.score }}/100</td>
+              <td class="scan-model">{{ s.model_version }}</td>
+              <td class="scan-time">{{ s.created_at[:16].replace('T',' ') }}</td>
+              <td>
+                <button class="btn btn-ghost btn-xs detail-btn" data-scan='{{ s | tojson }}'>details</button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="empty-state">
+        No scans yet. Run <code>priveye-agent scan</code> on a registered host.
+      </p>
+      {% endif %}
+    </section>
+
+  </div><!-- /two-col -->
+
+  <!-- ─ Scan detail drawer ───────────────────────────────────────────── -->
+  <aside id="detail-drawer" class="detail-drawer" aria-hidden="true">
+    <div class="drawer-inner">
+      <div class="drawer-header">
+        <h2 class="drawer-title">Scan detail</h2>
+        <button class="drawer-close" id="drawer-close">✕</button>
+      </div>
+      <div id="drawer-content" class="drawer-content">
+        <!-- filled by JS -->
+      </div>
+    </div>
+  </aside>
+
+</main><!-- /main-grid -->
+
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Priv-Eye — local development stack
+#
+# Usage:
+#   cp .env.example .env          # fill in JWT_SECRET at minimum
+#   docker compose run --rm api python -m priveye_api.ml.train
+#   docker compose up --build
+#
+# Services:
+#   api        — FastAPI on :8000
+#   dashboard  — Starlette/Jinja2 dashboard on :3000 (proxies to api)
+# ─────────────────────────────────────────────────────────────────────────────
+
+x-api-env: &api-env
+  ENVIRONMENT: ${ENVIRONMENT:-development}
+  DEBUG: ${DEBUG:-true}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
+  JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+  ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+  REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-14}
+  DATABASE_URL: sqlite+aiosqlite:////data/priveye.db
+  AGENT_REPLAY_WINDOW_SECONDS: ${AGENT_REPLAY_WINDOW_SECONDS:-300}
+  AGENT_NONCE_TTL_SECONDS: ${AGENT_NONCE_TTL_SECONDS:-600}
+  RATE_LIMIT_LOGIN_PER_MIN: ${RATE_LIMIT_LOGIN_PER_MIN:-5}
+  RATE_LIMIT_API_PER_MIN: ${RATE_LIMIT_API_PER_MIN:-300}
+  RATE_LIMIT_SCAN_PER_HOST_PER_MIN: ${RATE_LIMIT_SCAN_PER_HOST_PER_MIN:-60}
+  MODEL_PATH: /data/model.pkl
+  MODEL_SHA256: ${MODEL_SHA256:-}
+  GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+  GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-flash}
+  GEMINI_PER_USER_DAILY_QUOTA: ${GEMINI_PER_USER_DAILY_QUOTA:-30}
+  CORS_ORIGINS: http://localhost:3000
+
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - api-data:/data
+    environment:
+      <<: *api-env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      PRIVEYE_API: http://api:8000
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  api-data:
+    # Persists SQLite DB + model.pkl between container restarts.
+    # In prod, replace with a bind-mount or Postgres + S3 for the model artifact.

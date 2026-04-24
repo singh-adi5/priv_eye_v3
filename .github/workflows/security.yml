@@ -1,0 +1,71 @@
+name: Security scans
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Weekly on Monday at 07:00 UTC — catches newly-published CVEs against
+    # pinned deps without waiting for a push.
+    - cron: "0 7 * * 1"
+
+jobs:
+  gitleaks:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history so gitleaks can diff all commits
+
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  trivy-api:
+    name: Container scan — API image (trivy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker build -t priveye-api:ci api/
+
+      - name: Trivy scan (CRITICAL + HIGH, fail on CRITICAL)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: priveye-api:ci
+          format: table
+          exit-code: "1"
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+  trivy-dashboard:
+    name: Container scan — dashboard image (trivy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build dashboard image
+        run: docker build -t priveye-dashboard:ci dashboard/
+
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: priveye-dashboard:ci
+          format: table
+          exit-code: "1"
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+  sca:
+    name: SCA — pip-audit (scheduled)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pip-audit
+      - run: pip-audit --requirement api/pyproject.toml
+      - run: pip-audit --requirement agent/pyproject.toml
+      - run: pip-audit --requirement dashboard/requirements.txt

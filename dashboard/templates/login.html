@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Priv-Eye — {% if mode == 'register' %}Register{% else %}Sign in{% endif %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="auth-body">
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="brand">
+        <span class="brand-icon">◈</span>
+        <span class="brand-name">PRIV-EYE</span>
+      </div>
+      <p class="brand-tagline">Linux Privilege Posture Engine</p>
+
+      {% if error %}
+      <div class="alert alert-error">{{ error }}</div>
+      {% endif %}
+
+      {% if mode == 'register' %}
+      <h2 class="auth-title">Create account</h2>
+      <form method="POST" action="/register" class="auth-form">
+        <label class="form-label">Email
+          <input class="form-input" type="email" name="email" required autocomplete="email">
+        </label>
+        <label class="form-label">Password <span class="hint">(12+ chars)</span>
+          <input class="form-input" type="password" name="password" required autocomplete="new-password" minlength="12">
+        </label>
+        <button class="btn btn-primary" type="submit">Create account</button>
+      </form>
+      <p class="auth-switch">Already registered? <a href="/login">Sign in</a></p>
+      {% else %}
+      <h2 class="auth-title">Sign in</h2>
+      <form method="POST" action="/login" class="auth-form">
+        <label class="form-label">Email
+          <input class="form-input" type="email" name="email" required autocomplete="email">
+        </label>
+        <label class="form-label">Password
+          <input class="form-input" type="password" name="password" required autocomplete="current-password">
+        </label>
+        <button class="btn btn-primary" type="submit">Sign in</button>
+      </form>
+      <p class="auth-switch">New? <a href="/register">Create an account</a></p>
+      {% endif %}
+    </div>
+    <p class="auth-footer">
+      Model: Random Forest 3-class · <a href="https://github.com/singh-adi5/priv-eye" target="_blank">v1 reference</a>
+    </p>
+  </div>
+</body>
+</html>

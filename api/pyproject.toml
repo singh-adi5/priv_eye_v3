@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools>=77.0", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "priveye-api"
+version = "0.1.0"
+description = "Priv-Eye API — ML-backed Linux privilege posture scoring"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Aditya Singh" }]
+
+# Pinned — vuln scans run in CI against this set.
+dependencies = [
+    "fastapi==0.115.4",
+    "uvicorn[standard]==0.32.0",
+    "pydantic==2.9.2",
+    "email-validator==2.2.0",
+    "pydantic-settings==2.6.1",
+    "sqlalchemy[asyncio]==2.0.36",
+    "aiosqlite==0.20.0",
+    "alembic==1.14.0",
+    "argon2-cffi==23.1.0",
+    "pyjwt==2.10.0",
+    "python-multipart==0.0.17",
+    "slowapi==0.1.9",
+    "httpx==0.28.0",
+    "scikit-learn==1.5.2",
+    "pandas==2.2.3",
+    "numpy==2.1.3",
+    "joblib==1.4.2",
+    "jinja2==3.1.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.3",
+    "pytest-asyncio==0.24.0",
+    "httpx==0.28.0",
+    "ruff==0.7.4",
+    "mypy==1.13.0",
+    "bandit==1.7.10",
+    "pip-audit==2.7.3",
+    "types-requests",
+]
+insights = [
+    "google-genai==0.3.0",
+]
+
+# Tell setuptools to only package priveye_api — ignore alembic/ in the flat layout.
+[tool.setuptools.packages.find]
+include = ["priveye_api*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "S", "UP", "N"]
+ignore = ["S101"]  # assert is fine in tests
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S106"]  # allow hardcoded test secrets
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.bandit]
+exclude_dirs = ["tests", "alembic"]

@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+jobs:
+  api:
+    name: API — lint / type-check / test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps (with dev extras)
+        run: pip install -e ".[dev,insights]"
+
+      - name: ruff (lint + format check)
+        run: ruff check . && ruff format --check .
+
+      - name: mypy
+        run: mypy priveye_api
+
+      - name: bandit (SAST)
+        run: bandit -r priveye_api -c pyproject.toml
+
+      - name: Train model (needed for inference tests)
+        env:
+          MODEL_PATH: priveye_api/ml/model.pkl
+          DATABASE_URL: sqlite+aiosqlite:///./test.db
+          JWT_SECRET: ci-test-secret-not-real-at-least-32-chars
+        run: python -m priveye_api.ml.train
+
+      - name: pytest
+        env:
+          MODEL_PATH: priveye_api/ml/model.pkl
+          DATABASE_URL: sqlite+aiosqlite:///./test.db
+          JWT_SECRET: ci-test-secret-not-real-at-least-32-chars
+        run: pytest -v --tb=short
+
+  agent:
+    name: Agent — lint / type-check / test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agent
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -e ".[dev]"
+
+      - name: ruff
+        run: ruff check . && ruff format --check .
+
+      - name: mypy
+        run: mypy priveye_agent
+
+      - name: pytest
+        run: pytest -v --tb=short
+
+  pip-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pip-audit
+      - name: Audit API deps
+        run: pip-audit --requirement api/pyproject.toml --fix --dry-run
+      - name: Audit agent deps
+        run: pip-audit --requirement agent/pyproject.toml --fix --dry-run

@@ -9,14 +9,12 @@ Control refs:
 - ASVS V7.1.1 / NIST AU-2 — every auth event audited
 """
 
-
 import hashlib
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.audit import AuditLogger
@@ -38,6 +36,11 @@ _settings = get_settings()
 
 _MAX_FAILED_LOGINS = 5
 _LOCKOUT_MINUTES = 15
+# Constant-effort dummy hash — prevents timing-based user enumeration on login.
+_DUMMY_HASH = (
+    "$argon2id$v=19$m=65536,t=3,p=4$aaaaaaaaaaaaaaaa"
+    "$bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+)
 
 
 def _new_refresh_token() -> tuple[str, str, str]:
@@ -113,19 +116,29 @@ async def login(
     # Constant-effort path: always hash once even if user doesn't exist,
     # to avoid leaking account existence via timing.
     if user is None:
-        verify_password(body.password, "$argon2id$v=19$m=65536,t=3,p=4$aaaaaaaaaaaaaaaa$bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
-        await audit.emit(event_type="auth.login", outcome="failure",
-                         actor_ip=ip, actor_ua=ua, details={"email": body.email, "reason": "no_user"})
+        verify_password(body.password, _DUMMY_HASH)
+        await audit.emit(
+            event_type="auth.login",
+            outcome="failure",
+            actor_ip=ip,
+            actor_ua=ua,
+            details={"email": body.email, "reason": "no_user"},
+        )
         await db.commit()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid credentials")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Lockout check
     if user.locked_until and user.locked_until > now:
-        await audit.emit(event_type="auth.login", outcome="failure",
-                         actor_user_id=user.id, actor_ip=ip, actor_ua=ua,
-                         details={"reason": "locked"})
+        await audit.emit(
+            event_type="auth.login",
+            outcome="failure",
+            actor_user_id=user.id,
+            actor_ip=ip,
+            actor_ua=ua,
+            details={"reason": "locked"},
+        )
         await db.commit()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid credentials")
 
@@ -134,9 +147,14 @@ async def login(
         if user.failed_login_count >= _MAX_FAILED_LOGINS:
             user.locked_until = now + timedelta(minutes=_LOCKOUT_MINUTES)
             user.failed_login_count = 0  # reset counter; lockout is the penalty
-        await audit.emit(event_type="auth.login", outcome="failure",
-                         actor_user_id=user.id, actor_ip=ip, actor_ua=ua,
-                         details={"reason": "bad_password"})
+        await audit.emit(
+            event_type="auth.login",
+            outcome="failure",
+            actor_user_id=user.id,
+            actor_ip=ip,
+            actor_ua=ua,
+            details={"reason": "bad_password"},
+        )
         await db.commit()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid credentials")
 
@@ -156,9 +174,14 @@ async def login(
         expires_at=now + timedelta(days=_settings.refresh_token_expire_days),
     )
     db.add(refresh)
-    await audit.emit(event_type="auth.login", outcome="success",
-                     actor_user_id=user.id, actor_ip=ip, actor_ua=ua,
-                     details={"jti": jti})
+    await audit.emit(
+        event_type="auth.login",
+        outcome="success",
+        actor_user_id=user.id,
+        actor_ip=ip,
+        actor_ua=ua,
+        details={"jti": jti},
+    )
     await db.commit()
 
     return TokenResponse(
@@ -184,19 +207,27 @@ async def refresh_token(
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid refresh token") from e
 
     stored = await db.get(RefreshToken, jti)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if stored is None or stored.revoked_at is not None or stored.expires_at < now:
-        await audit.emit(event_type="auth.refresh", outcome="failure",
-                         actor_ip=ip, details={"jti": jti, "reason": "not_valid"})
+        await audit.emit(
+            event_type="auth.refresh",
+            outcome="failure",
+            actor_ip=ip,
+            details={"jti": jti, "reason": "not_valid"},
+        )
         await db.commit()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid refresh token")
 
     if stored.token_hash != _hash_refresh(plaintext):
         # Possible token theft — revoke the whole family (this token) and audit as attack.
         stored.revoked_at = now
-        await audit.emit(event_type="auth.refresh", outcome="failure",
-                         actor_user_id=stored.user_id, actor_ip=ip,
-                         details={"jti": jti, "reason": "hash_mismatch"})
+        await audit.emit(
+            event_type="auth.refresh",
+            outcome="failure",
+            actor_user_id=stored.user_id,
+            actor_ip=ip,
+            details={"jti": jti, "reason": "hash_mismatch"},
+        )
         await db.commit()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid refresh token")
 
@@ -209,13 +240,21 @@ async def refresh_token(
     stored.revoked_at = now
     access = create_access_token(user)
     jti2, plain2, digest2 = _new_refresh_token()
-    db.add(RefreshToken(
-        jti=jti2, user_id=user.id, token_hash=digest2,
-        expires_at=now + timedelta(days=_settings.refresh_token_expire_days),
-    ))
-    await audit.emit(event_type="auth.refresh", outcome="success",
-                     actor_user_id=user.id, actor_ip=ip,
-                     details={"old_jti": jti, "new_jti": jti2})
+    db.add(
+        RefreshToken(
+            jti=jti2,
+            user_id=user.id,
+            token_hash=digest2,
+            expires_at=now + timedelta(days=_settings.refresh_token_expire_days),
+        )
+    )
+    await audit.emit(
+        event_type="auth.refresh",
+        outcome="success",
+        actor_user_id=user.id,
+        actor_ip=ip,
+        details={"old_jti": jti, "new_jti": jti2},
+    )
     await db.commit()
     return TokenResponse(
         access_token=access,
@@ -237,9 +276,12 @@ async def logout(
         return
     stored = await db.get(RefreshToken, jti)
     if stored and stored.revoked_at is None:
-        stored.revoked_at = datetime.now(timezone.utc)
+        stored.revoked_at = datetime.now(UTC)
     audit = AuditLogger(db)
-    await audit.emit(event_type="auth.logout", outcome="success",
-                     actor_user_id=stored.user_id if stored else None,
-                     actor_ip=_client_ip(request))
+    await audit.emit(
+        event_type="auth.logout",
+        outcome="success",
+        actor_user_id=stored.user_id if stored else None,
+        actor_ip=_client_ip(request),
+    )
     await db.commit()

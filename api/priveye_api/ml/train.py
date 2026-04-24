@@ -21,7 +21,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -131,9 +131,11 @@ def synthesize(n: int = 1500, seed: int = RNG_SEED) -> pd.DataFrame:
         sudo_nopasswd_p=0.2,
         count=n - 2 * per,
     )
-    df = pd.concat([low, med, high], ignore_index=True).sample(
-        frac=1, random_state=seed
-    ).reset_index(drop=True)
+    df = (
+        pd.concat([low, med, high], ignore_index=True)
+        .sample(frac=1, random_state=seed)
+        .reset_index(drop=True)
+    )
     # Reindex to feature-column order, guaranteed.
     return df.reindex(columns=FEATURE_COLUMNS + ["risk_label"], fill_value=0)
 
@@ -145,11 +147,11 @@ def train(output_path: Path | None = None, n: int = 1500, seed: int = RNG_SEED) 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     df = synthesize(n=n, seed=seed)
-    X = df[FEATURE_COLUMNS]
+    features = df[FEATURE_COLUMNS]
     y = df["risk_label"].astype(int)
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=seed, stratify=y
+    x_train, x_test, y_train, y_test = train_test_split(
+        features, y, test_size=0.2, random_state=seed, stratify=y
     )
     model = RandomForestClassifier(
         n_estimators=300,
@@ -158,15 +160,15 @@ def train(output_path: Path | None = None, n: int = 1500, seed: int = RNG_SEED) 
         class_weight="balanced",
         n_jobs=-1,
     )
-    model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
-    accuracy = float(model.score(X_test, y_test))
+    model.fit(x_train, y_train)
+    y_pred = model.predict(x_test)
+    accuracy = float(model.score(x_test, y_test))
     report = classification_report(
         y_test, y_pred, target_names=["LOW", "MEDIUM", "HIGH"], output_dict=True, zero_division=0
     )
     cm = confusion_matrix(y_test, y_pred).tolist()
 
-    trained_at = datetime.now(timezone.utc).isoformat()
+    trained_at = datetime.now(UTC).isoformat()
     meta = {
         "version": MODEL_VERSION,
         "trained_at": trained_at,
@@ -201,7 +203,10 @@ def train(output_path: Path | None = None, n: int = 1500, seed: int = RNG_SEED) 
 
     _log.info(
         "Trained v%s | accuracy=%.4f | sha256=%s | path=%s",
-        MODEL_VERSION, accuracy, digest[:12], output_path,
+        MODEL_VERSION,
+        accuracy,
+        digest[:12],
+        output_path,
     )
     print(f"\n[+] model.pkl written to {output_path}")
     print(f"[+] SHA256: {digest}")

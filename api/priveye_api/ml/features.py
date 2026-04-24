@@ -103,5 +103,5 @@ def build_feature_vector(
 
     # Reindex to the authoritative order. Missing columns default to 0.
     values = [float(features.get(col, 0.0)) for col in FEATURE_COLUMNS]
-    humanized = dict(zip(FEATURE_COLUMNS, values))
+    humanized = dict(zip(FEATURE_COLUMNS, values, strict=False))
     return FeatureVector(values=values, humanized=humanized)

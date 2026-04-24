@@ -39,6 +39,9 @@ target-version = "py311"
 select = ["E", "F", "I", "B", "S", "N", "UP", "SIM"]
 ignore = ["S603"]  # subprocess - we DO want to run subprocess, carefully
 
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "SIM117"]  # assert + nested with are fine in tests
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"

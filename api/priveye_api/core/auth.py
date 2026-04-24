@@ -11,7 +11,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 import jwt
@@ -41,6 +41,7 @@ _bearer = HTTPBearer(auto_error=False)
 # Passwords
 # ----------------------------------------------------------------------------
 
+
 def hash_password(plaintext: str) -> str:
     """Argon2id hash. The salt is embedded in the returned string."""
     return _ph.hash(plaintext)
@@ -66,9 +67,10 @@ def password_needs_rehash(hashed: str) -> bool:
 # JWT access tokens
 # ----------------------------------------------------------------------------
 
+
 def create_access_token(user: User) -> str:
     """Short-lived access token. Role is a server-signed claim — never trust client role."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "sub": user.id,
         "email": user.email,
@@ -133,6 +135,7 @@ def require_role(*allowed: UserRole):
 # Agent HMAC
 # ----------------------------------------------------------------------------
 
+
 def generate_hmac_key() -> str:
     """32 bytes of CSPRNG, base64url. Returned once to the user at host registration."""
     return secrets.token_urlsafe(32)
@@ -188,7 +191,7 @@ async def verify_agent_request(
     except ValueError as e:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Agent authentication failed") from e
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     drift = abs((now - ts).total_seconds())
     if drift > _settings.agent_replay_window_seconds:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Agent authentication failed")
@@ -249,6 +252,7 @@ async def get_agent_host(
 # ----------------------------------------------------------------------------
 # User lookup helper used by auth router
 # ----------------------------------------------------------------------------
+
 
 async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
     result = await db.execute(select(User).where(User.email == email.lower()))

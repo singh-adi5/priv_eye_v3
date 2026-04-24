@@ -46,8 +46,7 @@ _JWT_PATTERN = re.compile(r"ey[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9
 def _redact(value: Any) -> Any:
     if isinstance(value, dict):
         return {
-            k: ("[REDACTED]" if k.lower() in _REDACT_KEYS else _redact(v))
-            for k, v in value.items()
+            k: ("[REDACTED]" if k.lower() in _REDACT_KEYS else _redact(v)) for k, v in value.items()
         }
     if isinstance(value, list):
         return [_redact(v) for v in value]

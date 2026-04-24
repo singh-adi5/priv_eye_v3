@@ -11,9 +11,9 @@ from __future__ import annotations
 
 import enum
 import secrets
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base, IDMixin, TimestampMixin
@@ -48,7 +48,7 @@ class User(Base, IDMixin, TimestampMixin):
     failed_login_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    hosts: Mapped[list["Host"]] = relationship(back_populates="owner", cascade="all, delete-orphan")
+    hosts: Mapped[list[Host]] = relationship(back_populates="owner", cascade="all, delete-orphan")
 
 
 class Host(Base, IDMixin, TimestampMixin):
@@ -61,8 +61,8 @@ class Host(Base, IDMixin, TimestampMixin):
     hmac_key_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
-    owner: Mapped["User"] = relationship(back_populates="hosts")
-    scans: Mapped[list["Scan"]] = relationship(back_populates="host", cascade="all, delete-orphan")
+    owner: Mapped[User] = relationship(back_populates="hosts")
+    scans: Mapped[list[Scan]] = relationship(back_populates="host", cascade="all, delete-orphan")
 
 
 class Scan(Base, IDMixin, TimestampMixin):
@@ -87,7 +87,7 @@ class Scan(Base, IDMixin, TimestampMixin):
     # Tombstoning (ASVS V7.2.1 / NIST AU-9): DELETE sets deleted_at, never removes row.
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    host: Mapped["Host"] = relationship(back_populates="scans")
+    host: Mapped[Host] = relationship(back_populates="scans")
 
 
 class AuditLog(Base, IDMixin, TimestampMixin):
@@ -136,7 +136,7 @@ class Nonce(Base):
     host_id: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     seen_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         nullable=False,
     )
 

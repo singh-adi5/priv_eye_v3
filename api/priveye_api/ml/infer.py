@@ -10,9 +10,7 @@ Control refs:
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
-import os
 import threading
 from pathlib import Path
 from typing import Any
@@ -31,7 +29,7 @@ _settings = get_settings()
 LABEL_ORDER: list[str] = ["LOW", "MEDIUM", "HIGH"]
 
 
-class ModelNotLoaded(RuntimeError):
+class ModelNotLoadedError(RuntimeError):
     pass
 
 
@@ -75,7 +73,7 @@ class _ModelHolder:
                 return
             path = Path(_settings.model_path)
             if not path.exists():
-                raise ModelNotLoaded(
+                raise ModelNotLoadedError(
                     f"Model file not found at {path}. Run scripts/train_model.py first."
                 )
             _verify_model_hash(path)
@@ -84,18 +82,21 @@ class _ModelHolder:
             self._model = payload["model"]
             declared_features = payload.get("features", [])
             if declared_features != FEATURE_COLUMNS:
-                raise ModelNotLoaded(
+                raise ModelNotLoadedError(
                     "Feature list in model.pkl does not match FEATURE_COLUMNS. "
                     "Retrain after changing feature set."
                 )
             self._meta = payload.get("meta", {})
-            _log.info("Model loaded: version=%s sha=%s",
-                      self._meta.get("version"), self._meta.get("sha256", "")[:12])
+            _log.info(
+                "Model loaded: version=%s sha=%s",
+                self._meta.get("version"),
+                self._meta.get("sha256", "")[:12],
+            )
 
     @property
     def model(self):  # type: ignore[no-untyped-def]
         if self._model is None:
-            raise ModelNotLoaded("Model not loaded — call load_model() at startup")
+            raise ModelNotLoadedError("Model not loaded — call load_model() at startup")
         return self._model
 
     @property
@@ -107,7 +108,7 @@ class _ModelHolder:
         importances = getattr(self.model, "feature_importances_", None)
         if importances is None:
             return {}
-        return {col: float(v) for col, v in zip(FEATURE_COLUMNS, importances)}
+        return {col: float(v) for col, v in zip(FEATURE_COLUMNS, importances, strict=False)}
 
 
 _holder = _ModelHolder()
@@ -162,12 +163,12 @@ def predict(payload: dict[str, Any]) -> dict[str, Any]:
     _validate_features(fv.values)
 
     # Use a named DataFrame so sklearn doesn't warn about missing feature names.
-    X = pd.DataFrame([fv.values], columns=FEATURE_COLUMNS)
-    probas = _holder.model.predict_proba(X)[0]  # shape (3,)
+    features = pd.DataFrame([fv.values], columns=FEATURE_COLUMNS)
+    probas = _holder.model.predict_proba(features)[0]  # shape (3,)
     # sklearn returns probas aligned with .classes_; we trained with 0=LOW,1=MEDIUM,2=HIGH
     classes = list(getattr(_holder.model, "classes_", [0, 1, 2]))
     # Reorder to our canonical LOW, MEDIUM, HIGH
-    prob_map = {LABEL_ORDER[int(c)]: float(p) for c, p in zip(classes, probas)}
+    prob_map = {LABEL_ORDER[int(c)]: float(p) for c, p in zip(classes, probas, strict=False)}
     # Safety if classes_ didn't include all 3 (shouldn't happen with stratified train)
     for lvl in LABEL_ORDER:
         prob_map.setdefault(lvl, 0.0)
@@ -189,13 +190,13 @@ def predict(payload: dict[str, Any]) -> dict[str, Any]:
 def current_model_version() -> str:
     try:
         return _holder.version
-    except ModelNotLoaded:
+    except ModelNotLoadedError:
         return "not-loaded"
 
 
 __all__ = [
     "ModelIntegrityError",
-    "ModelNotLoaded",
+    "ModelNotLoadedError",
     "current_model_version",
     "load_model",
     "predict",

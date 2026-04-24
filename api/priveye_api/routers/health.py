@@ -1,6 +1,5 @@
 """Liveness + readiness probes."""
 
-
 from fastapi import APIRouter
 
 from ..ml.infer import current_model_version

@@ -12,10 +12,9 @@ Control refs:
 - ASVS V11.1.4 / NIST SC-6 — quotas on expensive ops
 """
 
-
 import json
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -33,7 +32,13 @@ router = APIRouter(prefix="/api/v1/insights", tags=["insights"])
 _settings = get_settings()
 
 # Only what we actually let into the prompt. Everything else is dropped.
-_ALLOWED_TELEMETRY_KEYS = {"kernel_version", "euid", "suid_total_count", "sudo_has_nopasswd", "sudo_has_all"}
+_ALLOWED_TELEMETRY_KEYS = {
+    "kernel_version",
+    "euid",
+    "suid_total_count",
+    "sudo_has_nopasswd",
+    "sudo_has_all",
+}
 
 _CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f]")
 
@@ -56,7 +61,7 @@ def _sanitize_for_prompt(s: str, max_len: int = 128) -> str:
 
 
 async def _quota_remaining(db: AsyncSession, user_id: str) -> int:
-    window_start = datetime.now(timezone.utc) - timedelta(hours=24)
+    window_start = datetime.now(UTC) - timedelta(hours=24)
     result = await db.execute(
         select(func.count())
         .select_from(AuditLog)
@@ -73,7 +78,7 @@ async def _quota_remaining(db: AsyncSession, user_id: str) -> int:
 
 def _build_prompt(scan: Scan) -> str:
     # Scan fields are all server-generated or pre-validated integers/enums, safe.
-    safe_hostname = "redacted"  # intentional — never put hostname into LLM prompt
+    # intentional — never put hostname into LLM prompt
     kernel = _sanitize_for_prompt(str(scan.telemetry.get("kernel_version", "unknown")), 32)
     return (
         "You are a cyber-security architect. A Linux host posture scan produced "
@@ -108,7 +113,9 @@ async def generate_insight(
     try:
         from google import genai  # type: ignore[import-not-found]
     except ImportError as e:
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Insights backend not installed") from e
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, "Insights backend not installed"
+        ) from e
 
     prompt = _build_prompt(scan)
     client = genai.Client(api_key=_settings.gemini_api_key.get_secret_value())  # type: ignore[union-attr]

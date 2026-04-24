@@ -25,7 +25,10 @@ _settings = get_settings()
 
 # Rate limiter keyed on client IP. For login + agent endpoints we layer
 # finer-grained limits at the endpoint (per-user, per-host).
-limiter = Limiter(key_func=get_remote_address, default_limits=[f"{_settings.rate_limit_api_per_min}/minute"])
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=[f"{_settings.rate_limit_api_per_min}/minute"],
+)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -71,9 +74,15 @@ def configure_app_security(app: FastAPI) -> None:
         allow_origins=_settings.cors_origin_list,
         allow_credentials=True,
         allow_methods=["GET", "POST", "DELETE", "PATCH"],
-        allow_headers=["Authorization", "Content-Type", "X-PrivEye-Host",
-                       "X-PrivEye-Signature", "X-PrivEye-Timestamp",
-                       "X-PrivEye-Nonce", "X-PrivEye-Key"],
+        allow_headers=[
+            "Authorization",
+            "Content-Type",
+            "X-PrivEye-Host",
+            "X-PrivEye-Signature",
+            "X-PrivEye-Timestamp",
+            "X-PrivEye-Nonce",
+            "X-PrivEye-Key",
+        ],
         max_age=600,
     )
 

@@ -6,7 +6,6 @@ source of truth for what the API accepts. Everything downstream can assume
 bounded, well-typed input.
 """
 
-
 import re
 from datetime import datetime
 from typing import Annotated, Literal

@@ -6,7 +6,6 @@ Control refs:
 - Per-host HMAC key issued once at creation; stored hashed.
 """
 
-
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status

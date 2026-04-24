@@ -63,7 +63,9 @@ def _render_result(result: dict) -> None:
 @app.command()
 def scan(
     dry_run: Annotated[bool, typer.Option("--dry-run", help="Collect but do not upload.")] = False,
-    insecure: Annotated[bool, typer.Option("--insecure", help="Skip TLS verification (NOT for prod).")] = False,
+    insecure: Annotated[
+        bool, typer.Option("--insecure", help="Skip TLS verification (NOT for prod).")
+    ] = False,
     verbose: Annotated[bool, typer.Option("-v", "--verbose", help="Debug logs to stderr.")] = False,
     timeout: Annotated[float, typer.Option("--timeout", help="Per-probe timeout in seconds.")] = 20.0,
 ) -> None:

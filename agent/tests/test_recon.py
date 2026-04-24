@@ -116,7 +116,9 @@ def test_recon_never_uses_shell_true() -> None:
 def test_run_is_argv_only(argv_input: list[str]) -> None:
     """_run must never mutate argv into a shell string."""
     with patch("subprocess.run") as mock_run:
-        mock_run.return_value = subprocess.CompletedProcess(args=argv_input, returncode=0, stdout="", stderr="")
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=argv_input, returncode=0, stdout="", stderr=""
+        )
         recon._run(argv_input, timeout=1.0)
         _, kwargs = mock_run.call_args
         # The argv must be passed as a list; shell must not be set True.

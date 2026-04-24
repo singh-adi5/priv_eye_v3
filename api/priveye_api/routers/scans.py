@@ -10,8 +10,7 @@ Control refs:
 - ASVS V7.2.1 / NIST AU-9 — soft-delete (tombstone)
 """
 
-
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -116,7 +115,7 @@ async def soft_delete_scan(
     if scan is None or scan.owner_id != user.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Not found")
     if scan.deleted_at is None:
-        scan.deleted_at = datetime.now(timezone.utc)
+        scan.deleted_at = datetime.now(UTC)
     audit = AuditLogger(db)
     await audit.emit(
         event_type="scan.tombstone",

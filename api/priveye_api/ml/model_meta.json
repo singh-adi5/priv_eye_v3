@@ -1,0 +1,84 @@
+{
+  "version": "0.1.0",
+  "trained_at": "2026-04-23T23:47:29.494024+00:00",
+  "seed": 42,
+  "n_samples": 1500,
+  "params": {
+    "n_estimators": 300,
+    "max_depth": 7,
+    "class_weight": "balanced"
+  },
+  "accuracy": 0.9633333333333334,
+  "classification_report": {
+    "LOW": {
+      "precision": 0.97,
+      "recall": 0.97,
+      "f1-score": 0.97,
+      "support": 100.0
+    },
+    "MEDIUM": {
+      "precision": 0.9320388349514563,
+      "recall": 0.96,
+      "f1-score": 0.9458128078817734,
+      "support": 100.0
+    },
+    "HIGH": {
+      "precision": 0.9896907216494846,
+      "recall": 0.96,
+      "f1-score": 0.9746192893401016,
+      "support": 100.0
+    },
+    "accuracy": 0.9633333333333334,
+    "macro avg": {
+      "precision": 0.9639098522003137,
+      "recall": 0.9633333333333333,
+      "f1-score": 0.9634773657406249,
+      "support": 300.0
+    },
+    "weighted avg": {
+      "precision": 0.9639098522003137,
+      "recall": 0.9633333333333334,
+      "f1-score": 0.963477365740625,
+      "support": 300.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      97,
+      3,
+      0
+    ],
+    [
+      3,
+      96,
+      1
+    ],
+    [
+      0,
+      4,
+      96
+    ]
+  ],
+  "feature_columns": [
+    "kernel_major",
+    "kernel_minor",
+    "kernel_patch",
+    "suid_pkexec",
+    "suid_su",
+    "suid_sudo",
+    "suid_mount",
+    "suid_passwd",
+    "suid_chsh",
+    "suid_total_count",
+    "sudo_has_all",
+    "sudo_has_nopasswd",
+    "euid_is_root",
+    "kernel_flavor_standard",
+    "kernel_flavor_ubuntu",
+    "kernel_flavor_debian",
+    "kernel_flavor_rhel",
+    "kernel_flavor_kali-amd64",
+    "kernel_flavor_unknown"
+  ],
+  "sha256": "4347aaa7eeaa17dc491fe50236745db27a89d68648d48111af7837c33b640e1a"
+}

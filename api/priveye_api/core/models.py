@@ -12,6 +12,7 @@ from __future__ import annotations
 import enum
 import secrets
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import JSON, Boolean, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -78,7 +79,7 @@ class Scan(Base, IDMixin, TimestampMixin):
     # Output of the RF
     risk: Mapped[RiskLevel] = mapped_column(Enum(RiskLevel, native_enum=False), nullable=False)
     score: Mapped[int] = mapped_column(Integer, nullable=False)  # 0..100
-    probabilities: Mapped[dict[str, float]] = mapped_column(JSON, nullable=False)  # {LOW, MEDIUM, HIGH}
+    probabilities: Mapped[dict[str, float]] = mapped_column(JSON, nullable=False)
     feature_importances: Mapped[dict[str, float]] = mapped_column(JSON, nullable=False)
     reasons: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
 
